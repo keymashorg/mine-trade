@@ -43,7 +43,7 @@ export async function executeMiningShift(
   }
 
   // Execute mining
-  const result = mineShift(biome as any, depth as any, mode);
+  const result = mineShift(biome as 'Desert' | 'Rift' | 'Glacier', depth as 1 | 2 | 3, mode);
 
   // Apply damage
   const newHP = Math.max(0, run.rigHP - result.damage);

@@ -238,11 +238,17 @@ async function completeRunWin(runId: string, userId: string) {
   } = {};
 
   for (const item of run.stashItems) {
-    const field = `${item.metalType.toLowerCase()}Units` as 'solUnits' | 'aesUnits' | 'virUnits' | 'lunUnits' | 'nocUnits' | 'crnUnits';
-    if (field in unitUpdates) {
-      unitUpdates[field] = (unitUpdates[field] || 0) + item.units;
-    } else {
-      unitUpdates[field] = item.units;
+    const fieldMap: Record<string, 'solUnits' | 'aesUnits' | 'virUnits' | 'lunUnits' | 'nocUnits' | 'crnUnits'> = {
+      sol: 'solUnits',
+      aes: 'aesUnits',
+      vir: 'virUnits',
+      lun: 'lunUnits',
+      noc: 'nocUnits',
+      crn: 'crnUnits',
+    };
+    const field = fieldMap[item.metalType.toLowerCase()];
+    if (field) {
+      unitUpdates[field] = (unitUpdates[field] ?? 0) + item.units;
     }
   }
 
