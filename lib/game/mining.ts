@@ -84,7 +84,7 @@ export function mineVein(
   } else {
     // Generate units bundle
     const metalType = selectMetalForBiome(biome);
-    const ev = DEPTH_EV[depth][mode];
+    const ev = DEPTH_EV[depth][mode.toLowerCase() as 'drill' | 'blast'];
     // Generate value around EV (normal-ish distribution, clamped)
     const variance = ev * 0.3; // 30% variance
     const value = Math.max(0, ev + (random() - 0.5) * 2 * variance);
