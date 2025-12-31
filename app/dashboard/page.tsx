@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createRun, getActiveRun } from '@/app/actions/run';
@@ -18,6 +18,17 @@ export default function DashboardPage() {
   const [run, setRun] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
+  const loadRun = useCallback(async (userId: string) => {
+    try {
+      const activeRun = await getActiveRun(userId);
+      setRun(activeRun);
+    } catch (err) {
+      console.error('Error loading run:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     const userStr = localStorage.getItem('user');
     if (!userStr) {
@@ -29,17 +40,6 @@ export default function DashboardPage() {
     setUser(userData);
     loadRun(userData.id);
   }, [router, loadRun]);
-
-  const loadRun = async (userId: string) => {
-    try {
-      const activeRun = await getActiveRun(userId);
-      setRun(activeRun);
-    } catch (err) {
-      console.error('Error loading run:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleStartRun = async () => {
     if (!user) return;

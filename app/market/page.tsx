@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getMarketPrices, buyCommodityUnits, sellCommodityUnits, getSpecimenListings, buySpecimenListing } from '@/app/actions/market';
@@ -14,18 +14,7 @@ export default function MarketPage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'commodity' | 'specimens'>('commodity');
 
-  useEffect(() => {
-    const userStr = localStorage.getItem('user');
-    if (!userStr) {
-      router.push('/login');
-      return;
-    }
-    const userData = JSON.parse(userStr);
-    setUser(userData);
-    loadMarket(userData.sector);
-  }, [router, loadMarket]);
-
-  const loadMarket = async (sector: string) => {
+  const loadMarket = useCallback(async (sector: string) => {
     try {
       const marketPrices = await getMarketPrices(sector);
       setPrices(marketPrices);
@@ -36,7 +25,18 @@ export default function MarketPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    const userStr = localStorage.getItem('user');
+    if (!userStr) {
+      router.push('/login');
+      return;
+    }
+    const userData = JSON.parse(userStr);
+    setUser(userData);
+    loadMarket(userData.sector);
+  }, [router, loadMarket]);
 
   const handleBuyCommodity = async (metalType: string, units: number) => {
     if (!user) return;

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getVault } from '@/app/actions/vault';
@@ -10,6 +10,17 @@ export default function VaultPage() {
   const [user, setUser] = useState<any>(null);
   const [vault, setVault] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+
+  const loadVault = useCallback(async (userId: string) => {
+    try {
+      const vaultData = await getVault(userId);
+      setVault(vaultData);
+    } catch (err) {
+      console.error('Error loading vault:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     const userStr = localStorage.getItem('user');
@@ -21,17 +32,6 @@ export default function VaultPage() {
     setUser(userData);
     loadVault(userData.id);
   }, [router, loadVault]);
-
-  const loadVault = async (userId: string) => {
-    try {
-      const vaultData = await getVault(userId);
-      setVault(vaultData);
-    } catch (err) {
-      console.error('Error loading vault:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   if (loading) {
     return <div className="min-h-screen bg-gray-900 text-white p-8">Loading...</div>;

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getJournal } from '@/app/actions/vault';
@@ -10,6 +10,17 @@ export default function JournalPage() {
   const [user, setUser] = useState<any>(null);
   const [pages, setPages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const loadJournal = useCallback(async (userId: string) => {
+    try {
+      const journalPages = await getJournal(userId);
+      setPages(journalPages);
+    } catch (err) {
+      console.error('Error loading journal:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     const userStr = localStorage.getItem('user');
@@ -21,17 +32,6 @@ export default function JournalPage() {
     setUser(userData);
     loadJournal(userData.id);
   }, [router, loadJournal]);
-
-  const loadJournal = async (userId: string) => {
-    try {
-      const journalPages = await getJournal(userId);
-      setPages(journalPages);
-    } catch (err) {
-      console.error('Error loading journal:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   if (loading) {
     return <div className="min-h-screen bg-gray-900 text-white p-8">Loading...</div>;

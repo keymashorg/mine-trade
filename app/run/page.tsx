@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { getActiveRun, repairRig, payDayDue } from '@/app/actions/run';
 import { executeMiningShift, meltSpecimen, sellUnits } from '@/app/actions/mining';
@@ -19,17 +19,7 @@ export default function RunPage() {
   const [showPayment, setShowPayment] = useState(false);
   const [useLoanVoucher, setUseLoanVoucher] = useState(false);
 
-  useEffect(() => {
-    const userStr = localStorage.getItem('user');
-    if (!userStr) {
-      router.push('/login');
-      return;
-    }
-    setUser(JSON.parse(userStr));
-    loadRun();
-  }, [router, loadRun]);
-
-  const loadRun = async () => {
+  const loadRun = useCallback(async () => {
     const userStr = localStorage.getItem('user');
     if (!userStr) return;
     const userData = JSON.parse(userStr);
@@ -53,7 +43,17 @@ export default function RunPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [router]);
+
+  useEffect(() => {
+    const userStr = localStorage.getItem('user');
+    if (!userStr) {
+      router.push('/login');
+      return;
+    }
+    setUser(JSON.parse(userStr));
+    loadRun();
+  }, [router, loadRun]);
 
   const handleMine = async () => {
     if (!run || !selectedBiome) return;
