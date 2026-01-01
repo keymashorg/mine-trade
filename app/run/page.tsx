@@ -416,12 +416,14 @@ export default function RunPage() {
         )}
 
         {/* Hazard Modal */}
-        <HazardModal
-          hazard={hazardModal.hazard!}
-          open={hazardModal.open}
-          onChoice1={hazardModal.choice1Action}
-          onChoice2={hazardModal.choice2Action}
-        />
+        {hazardModal.hazard && (
+          <HazardModal
+            hazard={hazardModal.hazard}
+            open={hazardModal.open}
+            onChoice1={hazardModal.choice1Action}
+            onChoice2={hazardModal.choice2Action}
+          />
+        )}
       </div>
     </div>
   );

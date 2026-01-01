@@ -13,6 +13,8 @@ interface HazardModalProps {
 }
 
 export default function HazardModal({ hazard, open, onChoice1, onChoice2 }: HazardModalProps) {
+  if (!hazard) return null;
+  
   const choices = getHazardChoices(hazard);
   const iconName = getHazardIcon(hazard);
 
@@ -29,7 +31,7 @@ export default function HazardModal({ hazard, open, onChoice1, onChoice2 }: Haza
               HAZARD!
             </Dialog.Title>
             <Dialog.Description className="text-gray-300 capitalize">
-              {hazard.replace('_', ' ')}
+              {hazard ? hazard.replace('_', ' ') : 'Unknown Hazard'}
             </Dialog.Description>
           </div>
 
