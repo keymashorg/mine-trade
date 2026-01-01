@@ -1,6 +1,7 @@
 'use client';
 
-import { getHazardIcon, getHazardChoices, type HazardType } from '@/lib/game/depthTrack';
+import { getHazardIcon } from '@/lib/game/icons';
+import { getHazardChoices, type HazardType } from '@/lib/game/depthTrack';
 import ResourceIcon from './ResourceIcon';
 import * as Dialog from '@radix-ui/react-dialog';
 
