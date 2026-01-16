@@ -3,9 +3,22 @@
 import { prisma } from '@/lib/db';
 import { DUE_CURVE, MAX_DAYS, MAX_HP } from '@/lib/game/constants';
 import { getDueForDay } from '@/lib/game/run';
+import { MODULE_POOL, getStarterModules } from '@/lib/game/sim/modules';
 
 export async function createRun(userId: string) {
   const due = DUE_CURVE[0]; // Day 1 due
+
+  // Check for existing active run
+  const existing = await prisma.run.findFirst({
+    where: { userId, status: 'active' },
+  });
+  
+  if (existing) {
+    throw new Error('You already have an active run');
+  }
+
+  // Generate seed for deterministic RNG
+  const seed = Date.now().toString();
 
   const run = await prisma.run.create({
     data: {
@@ -14,6 +27,17 @@ export async function createRun(userId: string) {
       currentDay: 1,
       rigHP: MAX_HP,
       credits: 0,
+      seed,
+      heat: 0,
+      storageUsed: 0,
+      storageMax: 20,
+      wastePercent: 0.15,
+      throughputBase: 1.0,
+      policySellUnits: 'only_if_needed',
+      policyKeepSpecimens: 'high_plus',
+      policyMeltLow: false,
+      policyEmergency: true,
+      dailyUpkeep: 0,
     },
   });
 
@@ -27,6 +51,55 @@ export async function createRun(userId: string) {
       shiftsUsed: 0,
     },
   });
+
+  // Ensure modules exist in DB and install starters
+  const starterModules = getStarterModules();
+  
+  for (const mod of MODULE_POOL) {
+    await prisma.module.upsert({
+      where: { moduleId: mod.id },
+      update: {},
+      create: {
+        moduleId: mod.id,
+        name: mod.name,
+        description: mod.description,
+        category: mod.category,
+        slotCost: mod.slotCost,
+        rarity: mod.rarity,
+        throughputMod: mod.throughputMod,
+        heatGainMod: mod.heatGainMod,
+        wasteMod: mod.wasteMod,
+        specimenChanceMod: mod.specimenChanceMod,
+        highGradeChanceMod: mod.highGradeChanceMod,
+        scrapToUnitsMod: mod.scrapToUnitsMod,
+        storageMod: mod.storageMod,
+        sellBidBonusMod: mod.sellBidBonusMod,
+        volatilityMod: mod.volatilityMod,
+        upkeepCost: mod.upkeepCost,
+        unitYieldMod: mod.unitYieldMod,
+        jamChanceMod: mod.jamChanceMod,
+        unlockCondition: mod.unlockCondition,
+      },
+    });
+  }
+  
+  // Install starter modules
+  for (let i = 0; i < starterModules.length; i++) {
+    const dbModule = await prisma.module.findUnique({
+      where: { moduleId: starterModules[i].id },
+    });
+    
+    if (dbModule) {
+      await prisma.runModule.create({
+        data: {
+          runId: run.id,
+          moduleId: dbModule.id,
+          slotIndex: i,
+          installedDay: 1,
+        },
+      });
+    }
+  }
 
   return run;
 }
@@ -43,6 +116,11 @@ export async function getActiveRun(userId: string) {
       },
       stashItems: true,
       specimens: true,
+      modules: {
+        include: {
+          module: true,
+        },
+      },
       relics: {
         include: {
           relic: true,
