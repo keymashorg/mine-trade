@@ -25,6 +25,7 @@ model User {
   sector        String   @default("A") // A, B, or C
   credits       Int      @default(500) // Starting credits
   journalUnlocks String  @default("") // Comma-separated unlock IDs: "metal_mastery,ultra_trio,biome_trio"
+  moduleUnlocks String   @default("") // Comma-separated module IDs unlocked via journal
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -49,7 +50,37 @@ model Run {
   status      String   // "active", "won", "lost"
   currentDay  Int      @default(1)
   rigHP       Int      @default(10)
+  rigDamage   Int      @default(0) // Accumulated damage this day
   credits     Int      @default(0)
+  seed        String   @default("") // Deterministic RNG seed for run
+  
+  // Idle loop state
+  shiftInProgress Boolean @default(false)
+  shiftTick       Int     @default(0) // Current tick in shift
+  shiftMaxTicks   Int     @default(75) // Default 75 seconds
+  currentBiome    String? // Current shift biome
+  currentDepth    Int     @default(1) // Current shift depth (1-3)
+  
+  // Four core meters
+  heat            Float   @default(0) // 0-100%, throttle at 100%
+  storageUsed     Int     @default(0) // Current storage units
+  storageMax      Int     @default(20) // Base storage capacity
+  wastePercent    Float   @default(0.15) // Base 15% waste rate
+  throughputBase  Float   @default(1.0) // Units/tick base rate
+  
+  // Automation policy
+  policySellUnits   String  @default("only_if_needed") // "always", "only_if_needed", "never"
+  policyKeepSpecimens String @default("high_plus") // "high_plus", "keep_all", "keep_none"
+  policyMeltLow     Boolean @default(false) // Melt low-grade specimens
+  policyEmergency   Boolean @default(true) // Auto-liquidate if credits < due
+  
+  // Overclock state
+  overclockActive Boolean @default(false)
+  purgeCooldown   Int     @default(0) // Ticks until purge available
+  
+  // Daily upkeep from modules
+  dailyUpkeep     Int     @default(0)
+  
   stashSlots  Int      @default(12) // Current max slots
   stashSlotsUsed Int    @default(0) // Currently used slots
   slotUpgradeUsed Boolean @default(false) // Whether +4 slot upgrade was purchased
@@ -60,6 +91,8 @@ model Run {
   stashItems  StashItem[]
   specimens   Specimen[]
   relics      OwnedRelic[]
+  modules     RunModule[]
+  shiftLogs   ShiftLog[]
 }
 
 model DayState {
@@ -69,9 +102,28 @@ model DayState {
   day         Int
   due         Int
   paid        Boolean  @default(false)
-  shiftsUsed  Int      @default(0) // Deprecated - using depth track now
-  depthTrackNode Int   @default(0) // Current node (0-4, 0 = not started, 5 = extracted)
-  depthTrackExtracted Boolean @default(false) // Whether player extracted early
+  
+  // Idle shift system
+  shiftCompleted  Boolean @default(false)
+  biomeChosen     String? // Desert, Rift, Glacier
+  depthChosen     Int?    // 1, 2, 3
+  
+  // Module draft state
+  draftOffered    Json?   // Array of 3 module IDs offered
+  draftChosen     String? // Module ID chosen
+  
+  // Repair state
+  repairCost      Int     @default(0)
+  repairPaid      Boolean @default(false)
+  
+  // Daily upkeep paid
+  upkeepPaid      Int     @default(0)
+  
+  // Legacy fields (deprecated)
+  shiftsUsed  Int      @default(0) // Deprecated
+  depthTrackNode Int   @default(0) // Deprecated
+  depthTrackExtracted Boolean @default(false) // Deprecated
+  
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -198,5 +250,86 @@ model MarketDump {
   
   @@unique([userId, metalType, day])
   @@index([userId, day])
+}
+
+// Module definitions (static, seeded)
+model Module {
+  id          String   @id @default(cuid())
+  moduleId    String   @unique // e.g., "high_torque_drill"
+  name        String   // Display name
+  description String
+  category    String   // extraction, cooling, sorting, refining, storage, market
+  slotCost    Int      @default(1) // 1 or 2 slots
+  rarity      String   @default("common") // common, uncommon, rare
+  
+  // Modifiers (all additive percentages or flat values)
+  throughputMod      Float  @default(0) // +25% = 0.25
+  heatGainMod        Float  @default(0) // +15% = 0.15
+  wasteMod           Float  @default(0) // -20% = -0.20
+  specimenChanceMod  Float  @default(0) // +3% = 0.03
+  highGradeChanceMod Float  @default(0) // +10% = 0.10
+  scrapToUnitsMod    Float  @default(0) // +10% = 0.10
+  storageMod         Int    @default(0) // +6 = 6
+  sellBidBonusMod    Float  @default(0) // +1% = 0.01
+  volatilityMod      Float  @default(0) // -30% = -0.30
+  upkeepCost         Int    @default(0) // Credits/day
+  unitYieldMod       Float  @default(0) // -5% = -0.05
+  jamChanceMod       Float  @default(0) // +3% = 0.03
+  
+  // Unlock condition (optional)
+  unlockCondition String? // e.g., "journal_metal_SOL" - requires journal page complete
+  
+  createdAt   DateTime @default(now())
+  
+  runModules  RunModule[]
+}
+
+// Modules installed in a run
+model RunModule {
+  id          String   @id @default(cuid())
+  runId       String
+  run         Run      @relation(fields: [runId], references: [id], onDelete: Cascade)
+  moduleId    String
+  module      Module   @relation(fields: [moduleId], references: [id])
+  slotIndex   Int      // Which slot(s) this occupies
+  installedDay Int     // Day when installed
+  createdAt   DateTime @default(now())
+  
+  @@index([runId])
+}
+
+// Log of shift results for each day
+model ShiftLog {
+  id          String   @id @default(cuid())
+  runId       String
+  run         Run      @relation(fields: [runId], references: [id], onDelete: Cascade)
+  day         Int
+  biome       String
+  depth       Int
+  
+  // Production results
+  unitsProduced   Json   // { SOL: 10, AES: 5, ... }
+  specimensFound  Int    @default(0)
+  scrapProduced   Int    @default(0)
+  
+  // Meter peaks
+  heatMax         Float  @default(0)
+  storageMax      Int    @default(0)
+  wasteTotal      Float  @default(0)
+  
+  // Events
+  heatThrottled   Boolean @default(false)
+  damageFromHeat  Int     @default(0)
+  purgesUsed      Int     @default(0)
+  overclockTicks  Int     @default(0)
+  
+  // Policy results
+  unitsSold       Int     @default(0)
+  creditsSold     Int     @default(0)
+  specimensMelted Int     @default(0)
+  
+  createdAt   DateTime @default(now())
+  
+  @@unique([runId, day])
 }
 

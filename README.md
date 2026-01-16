@@ -1,285 +1,203 @@
 # Mine Trade
 
-A run-based roguelike mining game with hardcore daily payments, fictional metals, persistent Vault + Journal, and always-on markets.
+An **idle roguelike optimizer** where you run an automated mining rig, optimize throughput and heat management, draft upgrade modules, and survive 12 days of escalating payments.
 
-## Features
+## How to Play
 
-- **12-Day Runs**: Each run lasts 12 in-game days with escalating payment requirements
-- **Hardcore Mechanics**: Fail to pay your due and lose everything - nothing deposits to Vault
-- **Mining System**: Choose between Drill and Blast modes, each with different risk/reward profiles
-- **Specimens**: Collectible items with forms (Ore, Nugget, Coin, Bar) and grades (Low, High, Ultra)
-- **Vault**: Persistent storage for credits, units, and specimens from winning runs
-- **Journal**: Track your collections across 12 pages (6 metal pages, 3 biome pages, 3 form/grade pages)
-- **Markets**: Always-on commodity markets with sector-based pricing and specimen listings
-- **Relics**: Special items including Loan Voucher to help survive payment shortfalls
+### The Goal
+Survive 12 days of mining by paying your daily due. Miss a single payment and your run ends immediately with nothing saved to Vault. Win and deposit your specimens to the Journal for permanent collection progress.
 
-## Tech Stack
+### The Idle Loop
 
-- **Next.js 14** (App Router) + TypeScript
-- **TailwindCSS** for styling
-- **Prisma ORM** with SQLite (dev) / Postgres (prod)
-- **Custom Auth** with bcrypt password hashing
-- **Zustand** for client state management
+Each day follows this pattern:
 
-## Setup Instructions
+1. **Choose Biome & Depth** - Pick where to mine
+   - **Biomes**: Desert, Rift, Glacier (each favors different metals)
+   - **Depth 1**: Safe, lower yields
+   - **Depth 2**: Balanced risk/reward
+   - **Depth 3**: High risk, high reward (more heat, more specimens)
 
-### Prerequisites
+2. **Run the Shift** (~75 seconds auto-simulation)
+   - Watch your rig mine automatically
+   - **Four Core Meters** always visible:
+     - **Throughput**: Units produced per tick
+     - **Heat**: 0-100% (throttles at 100%, adds rig damage)
+     - **Storage**: Current/max capacity (overflow becomes scrap at 25% value)
+     - **Waste**: Percentage of ore lost to inefficiency
 
-- Node.js 20+
-- pnpm (or npm)
-- For production: Vercel account with Postgres database
+3. **Interactive Controls** during the shift:
+   - **Overclock (toggle)**: +20% throughput, +35% heat gain
+   - **Purge Valve (20s cooldown)**: -25 heat, but loses 5% of current ore
 
-### Local Development
+4. **Shift Complete** - Review your production:
+   - Units produced by metal type
+   - Specimens found (collectibles!)
+   - Heat/waste statistics
 
-1. **Clone the repository**
+5. **Module Draft** - Choose 1 of 3 upgrade modules (roguelike choice)
+   - Modules have tradeoffs (e.g., +throughput but +heat)
+   - 6 total module slots on your rig
 
-   ```bash
-   git clone https://github.com/keymashllc/mine-trade.git
-   cd mine-trade
-   ```
+6. **Repair (Optional)** - Fix rig damage (180 credits per HP)
 
-2. **Install dependencies**
+7. **Pay Due** - The hardcore moment
+   - Upkeep costs from modules are paid first
+   - Then pay your daily due
+   - **Cannot pay = Run Over** (no Vault deposit)
 
-   ```bash
-   pnpm install
-   # or
-   npm install
-   ```
+8. **Repeat** for 12 days!
 
-3. **Set up environment variables**
+### Automation Policy
 
-   Copy `.env.example` to `.env`:
+Set-and-forget rules for end-of-shift processing:
 
-   ```bash
-   cp .env.example .env
-   ```
+- **Sell Units**: Always / Only If Needed for Due / Never
+- **Keep Specimens**: High+ Only / Keep All / Keep None
+- **Melt Low Specimens**: Auto-convert low-grade specimens to units
+- **Emergency Mode**: Auto-sell to cover due if short
 
-   Update `.env` with your values:
+### Modules
 
-   ```env
-   DATABASE_URL="file:./prisma/dev.db"
-   NEXTAUTH_URL="http://localhost:3000"
-   NEXTAUTH_SECRET="your-secret-key-here"
-   NODE_ENV="development"
-   ```
+Your rig has **6 slots** for upgrade modules. Each module has tradeoffs:
 
-4. **Set up the database**
-
-   ```bash
-   # Generate Prisma Client
-   pnpm db:generate
-
-   # Create and run initial migration
-   pnpm db:migrate
-   # When prompted, name it "init" or "initial"
-
-   # Seed the database
-   pnpm db:seed
-   ```
-
-5. **Start the development server**
-
-   ```bash
-   pnpm dev
-   ```
-
-   Open [http://localhost:3000](http://localhost:3000) in your browser.
-
-## Deployment to Vercel
-
-### Step 1: Create GitHub Repository
-
-1. Go to [GitHub](https://github.com) and sign in
-2. Navigate to the `keymashllc` organization
-3. Click "New repository"
-4. Name it `mine-trade`
-5. **Do not** initialize with README, .gitignore, or license (we already have these)
-6. Click "Create repository"
-
-### Step 2: Push Code to GitHub
-
-```bash
-# Initialize git if not already done
-git init
-
-# Add remote (replace with your actual repo URL)
-git remote add origin https://github.com/keymashllc/mine-trade.git
-
-# Add all files
-git add .
-
-# Commit
-git commit -m "Initial commit"
-
-# Push to main branch
-git branch -M main
-git push -u origin main
-```
-
-### Step 3: Import to Vercel
-
-1. Go to [Vercel](https://vercel.com) and sign in
-2. Click "Add New..." → "Project"
-3. Select the **Keymash** team
-4. Import the `keymashllc/mine-trade` repository
-5. Configure the project:
-   - **Framework Preset**: Next.js
-   - **Root Directory**: `./` (default)
-   - **Build Command**: `pnpm build` (or `npm run build`)
-   - **Output Directory**: `.next` (default)
-   - **Install Command**: `pnpm install` (or `npm install`)
-
-### Step 4: Configure Environment Variables
-
-In Vercel project settings → Environment Variables, add:
-
-- `DATABASE_URL`: Your Postgres connection string (from Vercel Postgres or Neon)
-- `NEXTAUTH_URL`: Your Vercel deployment URL (e.g., `https://mine-trade.vercel.app`)
-- `NEXTAUTH_SECRET`: Generate a secure random string (e.g., `openssl rand -base64 32`)
-- `NODE_ENV`: `production`
-
-### Step 5: Set Up Database
-
-#### Option A: Vercel Postgres
-
-1. In Vercel project, go to "Storage" tab
-2. Click "Create Database" → "Postgres"
-3. Copy the `DATABASE_URL` connection string
-4. Add it to Environment Variables
-
-#### Option B: Neon Postgres
-
-1. Go to [Neon](https://neon.tech) and create a database
-2. Copy the connection string
-3. Add it to Vercel Environment Variables as `DATABASE_URL`
-
-### Step 6: Configure Prisma for Production
-
-Update `prisma/schema.prisma` to use Postgres in production:
-
-```prisma
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
-```
-
-Or use environment-based configuration (see Prisma docs).
-
-### Step 7: Run Migrations on Vercel
-
-The build script includes `prisma migrate deploy`, which will run migrations automatically during build. Alternatively, you can run migrations manually:
-
-1. Install Vercel CLI: `npm i -g vercel`
-2. Run: `vercel env pull` to get environment variables
-3. Run: `pnpm db:migrate` locally with production `DATABASE_URL`
-4. Or use Vercel's database dashboard to run SQL directly
-
-### Step 8: Deploy
-
-1. Click "Deploy" in Vercel
-2. Wait for build to complete
-3. Visit your deployment URL
-
-## Database Migrations
-
-### Local Development
-
-```bash
-# Create a new migration
-pnpm db:migrate
-
-# Apply migrations
-pnpm db:migrate
-```
-
-### Production (Vercel)
-
-Migrations run automatically during build via `prisma migrate deploy` in the build script. Ensure `DATABASE_URL` is set correctly in Vercel environment variables.
-
-## Testing
-
-```bash
-# Run tests
-pnpm test
-
-# Run typecheck
-pnpm typecheck
-
-# Run lint
-pnpm lint
-```
-
-## Project Structure
-
-```
-mine-trade/
-├── app/                    # Next.js App Router pages
-│   ├── actions/           # Server actions
-│   ├── api/               # API routes
-│   ├── dashboard/         # Dashboard page
-│   ├── run/               # Run gameplay page
-│   ├── vault/             # Vault page
-│   ├── journal/           # Journal page
-│   └── market/            # Market page
-├── lib/
-│   ├── db.ts              # Prisma client
-│   ├── auth.ts            # Authentication utilities
-│   └── game/              # Game logic
-│       ├── constants.ts   # Game constants
-│       ├── mining.ts      # Mining logic
-│       ├── market.ts      # Market logic
-│       ├── relics.ts      # Relics system
-│       └── journal.ts     # Journal logic
-├── prisma/
-│   ├── schema.prisma      # Database schema
-│   └── seed.ts            # Seed script
-└── .github/
-    └── workflows/
-        └── ci.yml         # GitHub Actions CI
-```
-
-## Game Rules
-
-### Run Mechanics
-
-- Each run lasts 12 days
-- Daily payment due increases each day (see `DUE_CURVE` in constants)
-- Fail to pay → run ends, everything confiscated
-- Survive day 12 → win, stash deposits to Vault
-
-### Mining
-
-- 2 shifts per day, 3 veins per shift
-- Choose Drill (15-20% damage chance) or Blast (35% + 15% damage chance)
-- 10 HP rig, repair costs 180 credits per HP
-- HP reaches 0 → run ends
+| Category | Example Module | Upside | Downside |
+|----------|---------------|--------|----------|
+| Extraction | High Torque Drill | +25% throughput | +15% heat gain |
+| Extraction | Gentle Bit | -15% heat | -10% throughput |
+| Cooling | Cryo Loop | -30% heat gain | +50 credits/day upkeep |
+| Sorting | Precision Sieve | -20% waste | -10% throughput |
+| Refining | Smelter | +25% scrap recovery | +15% heat |
+| Storage | Vacuum Vault | +15 storage | +80 credits/day upkeep |
+| Market | Fee Reducer | +2% sell price | -3 storage |
 
 ### Specimens
 
-- Forms: Ore (4), Nugget (6), Coin (7), Bar (8) base units
-- Grades: Low (1.0x), High (1.5x), Ultra (2.3x) multipliers
-- Melt specimens to units, sell units for credits
+Collectible items found during mining:
+- **Forms**: Ore, Nugget, Coin, Bar (increasing base units)
+- **Grades**: Low, High, Ultra (1.0x, 1.5x, 2.3x multiplier)
+- **Melt Value**: Form base units × Grade multiplier
 
-### Markets
+Ultra specimens have a sparkle animation and are the most valuable for Journal completion.
 
-- Commodity prices update every 15 minutes per sector
-- 2% spread: Sell at 99% (bid), Buy at 101% (ask)
-- Specimen listings: Max 2 active, 60min cooldown, 3% fee
+### The Journal
+
+Your persistent collection across all runs:
+- 6 Metal pages (one per fictional metal)
+- 3 Biome pages
+- 3 Form/Grade pages
+
+Fill journal pages to unlock additional modules for future runs.
+
+### The Vault
+
+Persistent storage from winning runs:
+- Credits
+- Units by metal type
+- Specimens (for market listing or Journal)
+
+---
+
+## Technical Details
+
+### Tech Stack
+- **Next.js 14** (App Router) + TypeScript
+- **TailwindCSS** for styling
+- **Prisma ORM** with Postgres
+- **Custom Auth** with bcrypt
+
+### Local Development
+
+```bash
+# Install dependencies
+pnpm install
+
+# Set up environment
+cp .env.example .env
+# Edit .env with your DATABASE_URL
+
+# Database setup
+pnpm db:generate
+pnpm db:migrate
+pnpm db:seed
+
+# Start dev server
+pnpm dev
+```
+
+### Running Tests
+
+```bash
+pnpm test
+```
+
+### Project Structure
+
+```
+mine-trade/
+├── app/
+│   ├── actions/shift.ts    # Shift simulation server actions
+│   ├── run/page.tsx        # Main gameplay UI
+│   └── ...
+├── lib/game/
+│   ├── sim/                # NEW: Simulation engine
+│   │   ├── engine.ts       # Tick-based simulation
+│   │   ├── modules.ts      # 20 module definitions
+│   │   ├── policy.ts       # Automation policy processing
+│   │   └── types.ts        # TypeScript interfaces
+│   ├── constants.ts        # Game constants (metals, prices, due curve)
+│   └── ...
+├── components/
+│   ├── RunHUD.tsx          # HUD with meters
+│   └── ResourceIcon.tsx    # Icon component with overlays
+└── prisma/
+    └── schema.prisma       # Database schema
+```
+
+### Key Files for Gameplay Logic
+
+- `lib/game/sim/engine.ts` - Core tick simulation (deterministic RNG)
+- `lib/game/sim/modules.ts` - All module definitions with modifiers
+- `lib/game/sim/policy.ts` - End-of-day automation processing
+- `app/actions/shift.ts` - Server actions for shift execution
+
+---
+
+## Game Constants
+
+### Daily Due Curve
+```
+Day 1:  250    Day 5:  730    Day 9:  2120
+Day 2:  330    Day 6:  950    Day 10: 2770
+Day 3:  430    Day 7:  1240   Day 11: 3620
+Day 4:  560    Day 8:  1620   Day 12: 4740
+```
+
+### Metals
+| Metal | Base Price | Best Biome |
+|-------|------------|------------|
+| Solvium | 20 | Desert, Glacier |
+| Aethersteel | 28 | Rift |
+| Virelith | 26 | Rift |
+| Lunargent | 32 | Desert, Glacier |
+| Noctyrium | 55 | Rift |
+| Crownlite | 180 | Glacier (rare) |
+
+### Depth Modifiers
+| Depth | Throughput | Specimen Chance | Heat | Waste |
+|-------|------------|-----------------|------|-------|
+| 1 | 1.0x | 8% | 1.0x | 1.0x |
+| 2 | 1.35x | 14% | 1.25x | 1.15x |
+| 3 | 1.8x | 22% | 1.6x | 1.35x |
+
+---
 
 ## Contributing
 
 1. Fork the repository
 2. Create a feature branch
-3. Make your changes
-4. Run tests and linting
-5. Submit a pull request
+3. Run `pnpm test` and `pnpm lint`
+4. Submit a pull request
 
 ## License
 
-[Add your license here]
-
-## Support
-
-For issues and questions, please open an issue on GitHub.
-
+MIT
