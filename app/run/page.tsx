@@ -87,8 +87,8 @@ export default function RunPage() {
       
       // Load policy from run
       setPolicy({
-        sellUnits: activeRun.policySellUnits || 'only_if_needed',
-        keepSpecimens: activeRun.policyKeepSpecimens || 'high_plus',
+        sellUnits: (activeRun.policySellUnits || 'only_if_needed') as 'always' | 'only_if_needed' | 'never',
+        keepSpecimens: (activeRun.policyKeepSpecimens || 'high_plus') as 'high_plus' | 'keep_all' | 'keep_none',
         meltLow: activeRun.policyMeltLow || false,
         emergencyMode: activeRun.policyEmergency ?? true,
       });
