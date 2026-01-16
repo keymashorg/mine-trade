@@ -684,7 +684,7 @@ export default function RunPage() {
           <div className="bg-gray-800 p-6 rounded-lg text-center">
             <h2 className="text-4xl font-bold mb-4 text-red-500">RUN FAILED</h2>
             <p className="text-xl text-gray-400 mb-6">
-              You couldn't meet the daily payment.
+              You could not meet the daily payment.
             </p>
             <p className="text-gray-500 mb-8">
               Nothing saved to vault. Try again.
