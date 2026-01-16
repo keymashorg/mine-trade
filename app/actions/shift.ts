@@ -344,7 +344,9 @@ export async function chooseDraftModule(
     where: { id: runId, userId, status: 'active' },
     include: {
       dayStates: true,
-      modules: true,
+      modules: {
+        include: { module: true }
+      },
     },
   });
   
@@ -371,7 +373,7 @@ export async function chooseDraftModule(
   
   // Find next available slot
   const usedSlots = run.modules.reduce((acc, rm) => {
-    const mod = getModuleById(rm.module?.moduleId || '');
+    const mod = getModuleById(rm.module.moduleId);
     return acc + (mod?.slotCost || 1);
   }, 0);
   
